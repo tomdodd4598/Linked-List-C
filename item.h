@@ -1,18 +1,22 @@
 #pragma once
 
-#define DECLARE_LIST(TYPE, CAPITAL, LOWERCASE)\
+#include <stdbool.h>
+#include <stdio.h>
+#include <string.h>
+
+#define TYPEDEF_ITEM(TYPE, CAPITAL, LOWERCASE)\
 \
 typedef struct Item##CAPITAL Item##CAPITAL;\
 struct Item##CAPITAL {\
-	TYPE* value;\
+	TYPE value;\
 	Item##CAPITAL* next;\
 };\
+
+#define DECLARE_LIST(TYPE, CAPITAL, LOWERCASE)\
 \
-Item##CAPITAL* new_item_##LOWERCASE(TYPE* val, Item##CAPITAL* next);\
+Item##CAPITAL* new_item_##LOWERCASE(TYPE val, Item##CAPITAL* next);\
 \
 void delete_item_##LOWERCASE(Item##CAPITAL* item);\
-\
-char* value_to_string_##LOWERCASE(Item##CAPITAL* item);\
 \
 Item##CAPITAL* print_get_next_##LOWERCASE(Item##CAPITAL* item);\
 \
@@ -25,9 +29,9 @@ bool has_next_##LOWERCASE(ItemIterator##CAPITAL* iter);\
 \
 void increment_##LOWERCASE(ItemIterator##CAPITAL* iter);\
 \
-void insert_item_##LOWERCASE(Item##CAPITAL** start, TYPE* val);\
+void insert_item_##LOWERCASE(Item##CAPITAL** start, TYPE val);\
 \
-void remove_item_##LOWERCASE(Item##CAPITAL** start, TYPE* val);\
+void remove_item_##LOWERCASE(Item##CAPITAL** start, TYPE val);\
 \
 void remove_all_##LOWERCASE(Item##CAPITAL** start);\
 \
@@ -41,7 +45,7 @@ struct ItemFoldbackClosure##CAPITAL {\
 	Item##CAPITAL* next;\
 };\
 \
-ItemFoldbackClosure##CAPITAL* new_item_foldback_closure_##LOWERCASE(ItemFoldbackClosure##CAPITAL* previous, Item##CAPITAL* item, Item##CAPITAL* next);\
+ItemFoldbackClosure##CAPITAL* new_item_foldback_closure_##LOWERCASE(ItemFoldbackClosure##CAPITAL* previous, char* (*f_some)(Item##CAPITAL*, Item##CAPITAL*, char*), Item##CAPITAL* item, Item##CAPITAL* next);\
 \
 char* foldback_generator_##LOWERCASE(ItemFoldbackClosure##CAPITAL* closure, char* inner_val);\
 \
@@ -71,8 +75,8 @@ void print_foldback_##LOWERCASE(Item##CAPITAL* start);\
 
 #define DEFINE_LIST(TYPE, CAPITAL, LOWERCASE)\
 \
-Item##CAPITAL* new_item_##LOWERCASE(TYPE* val, Item##CAPITAL* next) {\
-	printf("Creating item: %s\n", item_functions_##LOWERCASE.value_to_string(val));\
+Item##CAPITAL* new_item_##LOWERCASE(TYPE val, Item##CAPITAL* next) {\
+	printf("Creating item: %s\n", to_string_##LOWERCASE(val));\
 	Item##CAPITAL* item = malloc(sizeof *item);\
 	if (item != NULL) {\
 		item->value = val;\
@@ -82,25 +86,18 @@ Item##CAPITAL* new_item_##LOWERCASE(TYPE* val, Item##CAPITAL* next) {\
 }\
 \
 void delete_item_##LOWERCASE(Item##CAPITAL* item) {\
-	printf("Deleting item: %s\n", value_to_string_##LOWERCASE(item));\
-	if (item->value != NULL) {\
-		item_functions_##LOWERCASE.delete_value(item->value);\
-	}\
+	printf("Deleting item: %s\n", to_string_##LOWERCASE(item->value));\
+	delete_##LOWERCASE(item->value);\
 	if (item->next != NULL) {\
 		delete_item_##LOWERCASE(item->next);\
 	}\
 	free(item);\
 }\
 \
-char* value_to_string_##LOWERCASE(Item##CAPITAL* item) {\
-	return item_functions_##LOWERCASE.value_to_string(item->value);\
-}\
-\
 Item##CAPITAL* print_get_next_##LOWERCASE(Item##CAPITAL* item) {\
-	printf(value_to_string_##LOWERCASE(item));\
-	item = item->next;\
-	printf(item == NULL ? "\n" : ", ");\
-	return item;\
+	Item##CAPITAL* next = item->next;\
+	printf("%s%s", to_string_##LOWERCASE(item->value), next == NULL ? "\n" : ", ");\
+	return next;\
 }\
 \
 bool has_next_##LOWERCASE(ItemIterator##CAPITAL* iter) {\
@@ -111,20 +108,20 @@ void increment_##LOWERCASE(ItemIterator##CAPITAL* iter) {\
 	iter->item = iter->item->next;\
 }\
 \
-void insert_item_##LOWERCASE(Item##CAPITAL** start, TYPE* val) {\
-	while (*start != NULL && !item_functions_##LOWERCASE.insert_before(val, (*start)->value)) {\
+void insert_item_##LOWERCASE(Item##CAPITAL** start, TYPE val) {\
+	while (*start != NULL && !insert_before_##LOWERCASE(&val, *start)) {\
 		start = &(*start)->next;\
 	}\
 	*start = new_item_##LOWERCASE(val, *start);\
 }\
 \
-void remove_item_##LOWERCASE(Item##CAPITAL** start, TYPE* val) {\
-	while (*start != NULL && !item_functions_##LOWERCASE.is_value_equal(val, (*start)->value)) {\
+void remove_item_##LOWERCASE(Item##CAPITAL** start, TYPE val) {\
+	while (*start != NULL && !value_equals_##LOWERCASE(*start, &val)) {\
 		start = &(*start)->next;\
 	}\
 	\
 	if (*start == NULL) {\
-		printf("Item %s does not exist!\n", item_functions_##LOWERCASE.value_to_string(val));\
+		printf("Item %s does not exist!\n", to_string_##LOWERCASE(val));\
 	}\
 	else {\
 		Item##CAPITAL* removed = *start;\
@@ -132,7 +129,7 @@ void remove_item_##LOWERCASE(Item##CAPITAL** start, TYPE* val) {\
 		removed->next = NULL;\
 		delete_item_##LOWERCASE(removed);\
 	}\
-	item_functions_##LOWERCASE.delete_value(val);\
+	delete_##LOWERCASE(val);\
 }\
 \
 void remove_all_##LOWERCASE(Item##CAPITAL** start) {\
@@ -157,6 +154,17 @@ char* fold_##LOWERCASE(char* (*f_some)(Item##CAPITAL*, Item##CAPITAL*, char*), c
 	}\
 }\
 \
+ItemFoldbackClosure##CAPITAL* new_item_foldback_closure_##LOWERCASE(ItemFoldbackClosure##CAPITAL* previous, char* (*f_some)(Item##CAPITAL*, Item##CAPITAL*, char*), Item##CAPITAL* item, Item##CAPITAL* next) {\
+	ItemFoldbackClosure##CAPITAL* closure = malloc(sizeof *closure);\
+	if (closure != NULL) {\
+		closure->previous = previous;\
+		closure->f_some = f_some;\
+		closure->item = item;\
+		closure->next = next;\
+	}\
+	return closure;\
+}\
+\
 char* foldback_generator_##LOWERCASE(ItemFoldbackClosure##CAPITAL* closure, char* inner_val) {\
 	ItemFoldbackClosure##CAPITAL* previous = closure->previous;\
 	if (previous != NULL) {\
@@ -169,17 +177,6 @@ char* foldback_generator_##LOWERCASE(ItemFoldbackClosure##CAPITAL* closure, char
 		free(closure);\
 		return inner_val;\
 	}\
-}\
-\
-ItemFoldbackClosure##CAPITAL* new_item_foldback_closure_##LOWERCASE(ItemFoldbackClosure##CAPITAL* previous, char* (*f_some)(Item##CAPITAL*, Item##CAPITAL*, char*), Item##CAPITAL* item, Item##CAPITAL* next){\
-	ItemFoldbackClosure##CAPITAL* closure = malloc(sizeof *closure);\
-	if (closure != NULL) {\
-		closure->previous = previous;\
-		closure->f_some = f_some;\
-		closure->item = item;\
-		closure->next = next;\
-	}\
-	return closure;\
 }\
 \
 char* foldback_##LOWERCASE(char* (*f_some)(Item##CAPITAL*, Item##CAPITAL*, char*), char* (*f_last)(Item##CAPITAL*), char* (*f_empty)(), ItemFoldbackClosure##CAPITAL* closure, Item##CAPITAL* item) {\
@@ -218,7 +215,7 @@ void print_recursive_##LOWERCASE(Item##CAPITAL* start) {\
 }\
 \
 char* print_fold_f_some_##LOWERCASE(Item##CAPITAL* current, Item##CAPITAL* next, char* accumulator) {\
-	char* current_str = value_to_string_##LOWERCASE(current);\
+	char* current_str = to_string_##LOWERCASE(current->value);\
 	const size_t accumulator_len = strlen(accumulator), current_str_len = strlen(current_str);\
 	char* str = realloc(accumulator, accumulator_len + current_str_len + 3);\
 	if (str != NULL) {\
@@ -230,7 +227,7 @@ char* print_fold_f_some_##LOWERCASE(Item##CAPITAL* current, Item##CAPITAL* next,
 }\
 \
 char* print_fold_f_last_##LOWERCASE(Item##CAPITAL* current, char* accumulator) {\
-	char* current_str = value_to_string_##LOWERCASE(current);\
+	char* current_str = to_string_##LOWERCASE(current->value);\
 	const size_t accumulator_len = strlen(accumulator), current_str_len = strlen(current_str);\
 	char* str = realloc(accumulator, accumulator_len + current_str_len + 2);\
 	if (str != NULL) {\
@@ -252,7 +249,7 @@ void print_fold_##LOWERCASE(Item##CAPITAL* start) {\
 }\
 \
 char* print_foldback_f_some_##LOWERCASE(Item##CAPITAL* current, Item##CAPITAL* next, char* inner_val) {\
-	char* current_str = value_to_string_##LOWERCASE(current);\
+	char* current_str = to_string_##LOWERCASE(current->value);\
 	const size_t current_str_len = strlen(current_str), inner_val_len = strlen(inner_val);\
 	char* inner_copy = malloc(inner_val_len + 1), *str = NULL;\
 	if (inner_copy != NULL) {\
@@ -270,7 +267,7 @@ char* print_foldback_f_some_##LOWERCASE(Item##CAPITAL* current, Item##CAPITAL* n
 }\
 \
 char* print_foldback_f_last_##LOWERCASE(Item##CAPITAL* current) {\
-	char* current_str = value_to_string_##LOWERCASE(current);\
+	char* current_str = to_string_##LOWERCASE(current->value);\
 	const size_t current_str_len = strlen(current_str);\
 	char* str = malloc(current_str_len + 2);\
 	if (str != NULL) {\

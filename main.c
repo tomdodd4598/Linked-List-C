@@ -6,10 +6,33 @@
 #include <stdlib.h>
 #include <string.h>
 
-char* read_line();
+#define BLOCK_SIZE 16
 
-bool is_valid_string(char* raw_str, const size_t len) {
-	const char first = raw_str[0];
+char* read_line() {
+	char* input = NULL;
+	char temp[BLOCK_SIZE];
+	size_t input_len = 0, temp_len = 0;
+
+	do {
+		fgets(temp, BLOCK_SIZE, stdin);
+		temp[strcspn(temp, "\r\n")] = 0;
+		temp_len = strlen(temp);
+		char* realloc_ptr = realloc(input, input_len + temp_len + 1);
+		if (realloc_ptr == NULL) {
+			return NULL;
+		}
+		else {
+			input = realloc_ptr;
+			strcpy_s(input + input_len, temp_len + 1, temp);
+		}
+		input_len += temp_len;
+	} while (temp_len == BLOCK_SIZE - 1 && temp[BLOCK_SIZE - 2] != '\n');
+
+	return input;
+}
+
+bool is_valid_string(char* str, const size_t len) {
+	const char first = str[0];
 
 	if (len == 1 && first == '0') {
 		return true;
@@ -19,7 +42,7 @@ bool is_valid_string(char* raw_str, const size_t len) {
 
 	if (isalpha(first)) {
 		for (; i < len; ++i) {
-			const char c = raw_str[i];
+			const char c = str[i];
 			if (!isalpha(c) && !isdigit(c) && c != '_') {
 				return false;
 			}
@@ -32,7 +55,7 @@ bool is_valid_string(char* raw_str, const size_t len) {
 			return false;
 		}
 
-		const char second = raw_str[1];
+		const char second = str[1];
 		if (second < '1' || second > '9') {
 			return false;
 		}
@@ -44,7 +67,7 @@ bool is_valid_string(char* raw_str, const size_t len) {
 	}
 
 	for (; i < len; ++i) {
-		if (!isdigit(raw_str[i])) {
+		if (!isdigit(str[i])) {
 			return false;
 		}
 	}
@@ -56,9 +79,6 @@ int main() {
 	ItemString* start = NULL;
 
 	bool begin = true;
-	char* input;
-	size_t len;
-	char* substr;
 
 	while (true) {
 		if (!begin) {
@@ -69,10 +89,10 @@ int main() {
 		}
 
 		puts("Awaiting input...");
-		input = read_line();
+		char* const input = read_line();
 
 		if (input != NULL) {
-			len = strlen(input);
+			const size_t len = strlen(input);
 			if (len == 0) {
 				puts("\nProgram terminated!");
 				remove_all_string(&start);
@@ -84,19 +104,17 @@ int main() {
 					remove_all_string(&start);
 				}
 				else {
-					substr = malloc(len);
+					char* const substr = malloc(len);
 					if (substr != NULL) {
 						strcpy_s(substr, len, input + 1);
 						if (is_valid_string(substr, len - 1)) {
 							puts("\nRemoving item...");
-							remove_item_string(&start, new_string(substr));
-							continue;
+							remove_item_string(&start, substr);
 						}
-
-						puts("\nCould not parse input!");
-
-						free(substr);
-						substr = NULL;
+						else {
+							puts("\nCould not parse input!");
+							free(substr);
+						}
 					}
 				}
 			}
@@ -125,44 +143,13 @@ int main() {
 			}
 			else if (is_valid_string(input, len)) {
 				puts("\nInserting item...");
-				insert_item_string(&start, new_string(input));
+				insert_item_string(&start, input);
 				continue;
 			}
 			else {
 				puts("\nCould not parse input!");
 			}
 			free(input);
-			input = NULL;
 		}
 	}
-}
-
-#define BLOCK_SIZE 16
-
-char* read_line() {
-	char* input = NULL;
-	char* realloc_ptr = NULL;
-	char temp[BLOCK_SIZE];
-	size_t input_len = 0, temp_len = 0;
-
-	do {
-		// Read next BLOCK_SIZE characters from input stream
-		fgets(temp, BLOCK_SIZE, stdin);
-		// Replace existing newline with null character
-		temp[strcspn(temp, "\r\n")] = 0;
-		temp_len = strlen(temp);
-		// Reallocate string memory
-		realloc_ptr = realloc(input, input_len + temp_len + 1);
-		if (realloc_ptr == NULL) {
-			return NULL;
-		}
-		else {
-			input = realloc_ptr;
-			// Move read characters into heap
-			strcpy_s(input + input_len, temp_len + 1, temp);
-		}
-		input_len += temp_len;
-	} while (temp_len == BLOCK_SIZE - 1 && temp[BLOCK_SIZE - 2] != '\n');
-
-	return input;
 }

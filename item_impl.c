@@ -1,37 +1,25 @@
 #include "item_impl.h"
 
+#include <ctype.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
-String* new_string(char* raw_str) {
-	String* str = malloc(sizeof *str);
-	if (str != NULL) {
-		str->raw_str = raw_str;
-		str->len = strlen(raw_str);
-	}
-	return str;
-}
-
-void delete_string(String* str) {
-	free(str->raw_str);
+void delete_string(char* str) {
 	free(str);
 }
 
-char* get_raw_string(String* str) {
-	return str->raw_str;
+char* to_string_string(char* str) {
+	return str;
 }
 
-schar compare_digits(String* str, String* oth) {
-	const size_t str_len = str->len, oth_len = oth->len;
+int compare_digits(char* str, char* oth) {
+	const size_t str_len = strlen(str), oth_len = strlen(oth);
 	if (str_len == 0 || oth_len == 0) {
 		return -1;
 	}
 
-	char* raw_str = str->raw_str;
-	char* raw_oth = oth->raw_str;
-
-	char str_char = raw_str[0], oth_char = raw_oth[0];
+	char str_char = str[0], oth_char = oth[0];
 	const bool str_minus = str_char == '-', other_minus = oth_char == '-';
 	if (str_minus ^ other_minus) {
 		return str_minus ? -1 : 1;
@@ -47,8 +35,8 @@ schar compare_digits(String* str, String* oth) {
 	}
 
 	for (size_t i = str_minus ? 1 : 0; i < str_len; ++i) {
-		str_char = raw_str[i];
-		oth_char = raw_oth[i];
+		str_char = str[i];
+		oth_char = oth[i];
 		if (str_char > oth_char) {
 			return str_minus ? -1 : 1;
 		}
@@ -60,15 +48,13 @@ schar compare_digits(String* str, String* oth) {
 	return -1;
 }
 
-bool insert_before_string(String* val, String* oth) {
-	const schar digit_cmp = compare_digits(val, oth);
-	return digit_cmp < 0 ? true : (digit_cmp > 0 ? false : strcmp(val->raw_str, oth->raw_str) < 1);
+bool insert_before_string(char** val, ItemString* item) {
+	const int digit_cmp = compare_digits(*val, item->value);
+	return digit_cmp < 0 ? true : (digit_cmp > 0 ? false : strcmp(*val, item->value) < 1);
 }
 
-bool is_value_equal_string(String* val, String* oth) {
-	return strcmp(val->raw_str, oth->raw_str) == 0;
+bool value_equals_string(ItemString* item, char** val) {
+	return strcmp(item->value, *val) == 0;
 }
 
-const ItemFunctionsString item_functions_string = { get_raw_string, delete_string, insert_before_string, is_value_equal_string };
-
-DEFINE_LIST(String, String, string);
+DEFINE_LIST(char*, String, string);

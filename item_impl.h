@@ -2,34 +2,16 @@
 
 #include "item.h"
 
-#include <ctype.h>
 #include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
-typedef signed char schar;
+TYPEDEF_ITEM(char*, String, string);
 
-typedef struct String {
-	char* raw_str;
-	size_t len;
-} String;
+void delete_string(char* str);
 
-String* new_string(char* raw_str);
+char* to_string_string(char* str);
 
-void delete_string(String* str);
+bool insert_before_string(char** val, ItemString* item);
 
-typedef struct ItemFunctionsString {
-	char* (*value_to_string)(String*);
-	void (*delete_value)(String*);
-	bool (*insert_before)(String*, String*);
-	bool (*is_value_equal)(String*, String*);
-} ItemFunctionsString;
+bool value_equals_string(ItemString* item, char** val);
 
-char* get_raw_string(String* str);
-
-bool insert_before_string(String* val, String* oth);
-
-bool is_value_equal_string(String* val, String* oth);
-
-DECLARE_LIST(String, String, string);
+DECLARE_LIST(char*, String, string);
