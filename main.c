@@ -26,7 +26,8 @@ char* read_line() {
 			strcpy_s(input + input_len, temp_len + 1, temp);
 		}
 		input_len += temp_len;
-	} while (temp_len == BLOCK_SIZE - 1 && temp[BLOCK_SIZE - 2] != '\n');
+	}
+	while (temp_len == BLOCK_SIZE - 1 && temp[BLOCK_SIZE - 2] != '\n');
 
 	return input;
 }
